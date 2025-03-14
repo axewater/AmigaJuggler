@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { createBallMaterial } from './materials.js';
 
-export function createJuggler(envMap) {
+export function createJuggler(scene, envMap) {
     const juggler = new THREE.Group();
     const ballGeometry = new THREE.SphereGeometry(CONFIG.BALL_RADIUS, 32, 32);
 
@@ -27,6 +27,7 @@ export function createJuggler(envMap) {
     // Add legs
     addLegs(juggler, ballGeometry, envMap);
 
+    scene.add(juggler);
     return juggler;
 }
 
@@ -49,6 +50,13 @@ function addArms(juggler, geometry, envMap) {
         mesh.position.set(...part.pos);
         mesh.castShadow = true;
         juggler.add(mesh);
+        
+        // Name the arm parts for easier animation
+        if (part.pos[0] < 0) {
+            mesh.name = part.pos[1] === 5 ? 'leftArm' : part.pos[1] === 4 ? 'leftHand' : 'leftShoulder';
+        } else {
+            mesh.name = part.pos[1] === 5 ? 'rightArm' : part.pos[1] === 4 ? 'rightHand' : 'rightShoulder';
+        }
     });
 }
 

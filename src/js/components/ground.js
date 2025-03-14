@@ -1,39 +1,37 @@
 import * as THREE from 'three';
 
 export function createGround() {
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x005500,
-        roughness: 0.8
+    const groundGeometry = new THREE.PlaneGeometry(100, 100, 1, 1);
+    const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,  // White (will be tinted by the texture)
+        roughness: 0.8,
+        side: THREE.DoubleSide,
     });
+
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -2;
     ground.receiveShadow = true;
-    return ground;
-}
 
-export function createCheckerboard() {
-    const geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
-    const material = new THREE.MeshBasicMaterial({ vertexColors: true });
-    
-    const positions = geometry.attributes.position;
-    const colors = [];
-    
-    for (let i = 0; i < positions.count; i++) {
-        const x = Math.floor(positions.getX(i) + 50) / 2;
-        const z = Math.floor(positions.getZ(i) + 50) / 2;
-        
-        if ((Math.floor(x) + Math.floor(z)) % 2 === 0) {
-            colors.push(0.3, 0.3, 0.3);
-        } else {
-            colors.push(0.7, 0.7, 0.7);
+    // Create checkerboard texture
+    const size = 512;  // Increased size for better quality
+    const data = new Uint8Array(size * size * 3);
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            const stride = (i * size + j) * 3;
+            const isGreen = (i + j) % 2 === 0;
+            data[stride] = isGreen ? 0 : 255;      // Red
+            data[stride + 1] = isGreen ? 128 : 255; // Green
+            data[stride + 2] = 0;                 // Blue
         }
     }
     
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    const checkerboard = new THREE.Mesh(geometry, material);
-    checkerboard.rotation.x = -Math.PI / 2;
-    checkerboard.position.y = -1.99;
-    return checkerboard;
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBFormat);
+    texture.repeat.set(4, 4);  // Repeat the texture 4 times in each direction
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.needsUpdate = true;
+    groundMaterial.map = texture;
+
+    return ground;
 }

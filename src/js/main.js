@@ -1,10 +1,11 @@
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 import { createScene, createCamera, createRenderer } from './components/scene.js';
 import { createLighting } from './components/lighting.js';
-import { createGround, createCheckerboard } from './components/ground.js';
+import { createGround } from './components/ground.js';
 import { createEnvironment } from './components/environment.js';
 import { createJuggler } from './components/juggler.js';
-import { createJugglingBalls, updateBallPositions } from './components/balls.js';
+import { createJugglingBalls, updateJugglingBalls } from './components/balls.js';
 import { animateJuggler } from './components/animation.js';
 import { setupResizeHandler } from './utils/resize.js';
 
@@ -20,9 +21,9 @@ function init() {
     scene.add(ambientLight);
     scene.add(directionalLight);
 
-    // Add ground and checkerboard
-    scene.add(createGround());
-    scene.add(createCheckerboard());
+    // Add ground
+    const ground = createGround();
+    scene.add(ground);
 
     // Create environment
     const { cubeCamera, cubeRenderTarget, sky } = createEnvironment();
@@ -30,10 +31,10 @@ function init() {
     scene.add(sky);
 
     // Create juggler and balls
-    const juggler = createJuggler(cubeRenderTarget.texture);
+    const juggler = createJuggler(scene, cubeRenderTarget.texture);
     scene.add(juggler);
 
-    const balls = createJugglingBalls(cubeRenderTarget.texture);
+    const balls = createJugglingBalls(scene, cubeRenderTarget.texture);
     balls.forEach(ball => scene.add(ball));
 
     // Setup resize handler
@@ -54,7 +55,7 @@ function init() {
         }
 
         // Update animations
-        updateBallPositions(balls, time);
+        updateJugglingBalls(balls, time);
         animateJuggler(juggler, time);
 
         renderer.render(scene, camera);

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Scene with Gradient Sky and Checkered Floor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Set up the scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // Create gradient sky
+        const vertexShader = `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        
+        const fragmentShader = `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+                float h = normalize(vWorldPosition + offset).y;
+                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+        `;
+        
+        // Create sky dome
+        const uniforms = {
+            topColor: { value: new THREE.Color(0x0077ff) },  // Lighter blue at top
+            bottomColor: { value: new THREE.Color(0x8cbbff) }, // Lighter blue at bottom
+            offset: { value: 33 },
+            exponent: { value: 0.6 }
+        };
+        
+        const skyGeo = new THREE.SphereGeometry(400, 32, 15);
+        const skyMat = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            side: THREE.BackSide
+        });
+        
+        const sky = new THREE.Mesh(skyGeo, skyMat);
+        scene.add(sky);
+        
+        // Create checkered floor
+        const floorSize = 100;
+        const floorSegments = 100;
+        const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize, floorSegments, floorSegments);
+        floorGeometry.rotateX(-Math.PI / 2); // Rotate to be horizontal
+        
+        // Create custom checkered texture
+        const size = 1024;
+        const data = new Uint8Array(3 * size * size);
+        const checkerSize = 8; // Size of each checker square
+        
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const index = (i * size + j) * 3;
+                
+                // Determine if we're in a green or yellow square
+                const isGreen = Math.floor(i / (size / checkerSize)) % 2 !== Math.floor(j / (size / checkerSize)) % 2;
+                
+                if (isGreen) {
+                    // Bright green
+                    data[index] = 0;       // R
+                    data[index + 1] = 255;  // G
+                    data[index + 2] = 0;   // B
+                } else {
+                    // Bright yellow
+                    data[index] = 255;      // R
+                    data[index + 1] = 255;  // G
+                    data[index + 2] = 0;    // B
+                }
+            }
+        }
+        
+        const checkerTexture = new THREE.DataTexture(data, size, size, THREE.RGBFormat);
+        checkerTexture.needsUpdate = true;
+        
+        const floorMaterial = new THREE.MeshStandardMaterial({
+            map: checkerTexture,
+            side: THREE.DoubleSide,
+            roughness: 0.8
+        });
+        
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        scene.add(floor);
+        
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
+        
+        // Set up camera and controls
+        camera.position.set(10, 5, 10);
+        camera.lookAt(0, 0, 0);
+        
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
